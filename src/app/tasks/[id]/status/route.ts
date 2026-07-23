@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { notify } from "@/lib/email/notify";
 
 const STATUSES = ["todo", "doing", "done"];
 
@@ -16,6 +17,12 @@ export async function POST(
   if (!user) {
     return NextResponse.redirect(new URL("/login", request.url), { status: 303 });
   }
+
+  const { data: member } = await supabase
+    .from("members")
+    .select("id")
+    .eq("user_id", user.id)
+    .maybeSingle();
 
   const formData = await request.formData();
   const status = String(formData.get("status") ?? "");
@@ -38,7 +45,7 @@ export async function POST(
     .from("tasks")
     .update({ status })
     .eq("id", taskId)
-    .select("id");
+    .select("id, title, created_by");
 
   if (error) {
     tasksUrl.searchParams.set("error", error.message);
@@ -48,6 +55,17 @@ export async function POST(
   if (!data || data.length === 0) {
     tasksUrl.searchParams.set("error", "That task isn't assigned to you.");
     return NextResponse.redirect(tasksUrl, { status: 303 });
+  }
+
+  if (member) {
+    const task = data[0];
+    await notify({
+      eventType: "status_changed",
+      taskId,
+      actorId: member.id,
+      recipientId: task.created_by,
+      data: { taskTitle: task.title, status },
+    });
   }
 
   return NextResponse.redirect(tasksUrl, { status: 303 });

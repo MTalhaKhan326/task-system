@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { notifyMany } from "@/lib/email/notify";
 
 export async function POST(
   request: NextRequest,
@@ -43,6 +44,28 @@ export async function POST(
   if (error) {
     tasksUrl.searchParams.set("error", error.message);
     return NextResponse.redirect(tasksUrl, { status: 303 });
+  }
+
+  const { data: task } = await supabase
+    .from("tasks")
+    .select("title, created_by, task_assignees(member_id)")
+    .eq("id", taskId)
+    .maybeSingle();
+
+  if (task) {
+    const recipientIds = Array.from(
+      new Set([
+        task.created_by,
+        ...(task.task_assignees ?? []).map((row) => row.member_id),
+      ])
+    );
+
+    await notifyMany(recipientIds, {
+      eventType: "comment",
+      taskId,
+      actorId: member.id,
+      data: { taskTitle: task.title, body },
+    });
   }
 
   return NextResponse.redirect(tasksUrl, { status: 303 });

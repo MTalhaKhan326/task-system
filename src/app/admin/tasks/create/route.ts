@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { notifyMany } from "@/lib/email/notify";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -70,6 +71,13 @@ export async function POST(request: NextRequest) {
     await supabase
       .from("task_assignees")
       .insert(assigneeIds.map((memberId) => ({ task_id: task.id, member_id: memberId })));
+
+    await notifyMany(assigneeIds, {
+      eventType: "assigned",
+      taskId: task.id,
+      actorId: adminMember.id,
+      data: { taskTitle: title, dueDate, priority },
+    });
   }
 
   tasksUrl.searchParams.set("created", title);

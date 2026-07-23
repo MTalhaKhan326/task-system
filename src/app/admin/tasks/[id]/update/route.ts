@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { notify, notifyMany } from "@/lib/email/notify";
 
 export async function POST(
   request: NextRequest,
@@ -17,7 +18,7 @@ export async function POST(
 
   const { data: adminMember } = await supabase
     .from("members")
-    .select("role")
+    .select("id, role")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -77,6 +78,7 @@ export async function POST(
 
   const toAdd = [...desiredIds].filter((id) => !currentIds.has(id));
   const toRemove = [...currentIds].filter((id) => !desiredIds.has(id));
+  const unchanged = [...currentIds].filter((id) => desiredIds.has(id));
 
   if (toAdd.length > 0) {
     await supabase
@@ -91,6 +93,35 @@ export async function POST(
       .eq("task_id", taskId)
       .in("member_id", toRemove);
   }
+
+  await Promise.all([
+    ...toAdd.map((recipientId) =>
+      notify({
+        eventType: "reassigned",
+        taskId,
+        actorId: adminMember.id,
+        recipientId,
+        data: { taskTitle: title, change: "added" },
+      })
+    ),
+    ...toRemove.map((recipientId) =>
+      notify({
+        eventType: "reassigned",
+        taskId,
+        actorId: adminMember.id,
+        recipientId,
+        data: { taskTitle: title, change: "removed" },
+      })
+    ),
+    unchanged.length > 0
+      ? notifyMany(unchanged, {
+          eventType: "updated",
+          taskId,
+          actorId: adminMember.id,
+          data: { taskTitle: title },
+        })
+      : Promise.resolve(),
+  ]);
 
   tasksUrl.searchParams.set("updated", title);
   return NextResponse.redirect(tasksUrl, { status: 303 });
