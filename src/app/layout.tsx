@@ -54,6 +54,7 @@ export default async function RootLayout({
               <>
                 <Link href="/tasks">My Tasks</Link>
                 {role === "admin" && <Link href="/admin/tasks">Task Board</Link>}
+                {role === "admin" && <Link href="/admin/groups">Groups</Link>}
                 {role === "admin" && <Link href="/admin/members">Members</Link>}
                 <form action="/auth/logout" method="POST">
                   <button type="submit" className="hover:underline">
