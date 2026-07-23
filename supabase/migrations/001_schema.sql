@@ -13,7 +13,7 @@ create table members (
   user_id uuid references auth.users (id) on delete set null,
   full_name text,
   role text not null default 'member' check (role in ('admin', 'member')),
-  status text not null default 'invited' check (status in ('invited', 'active', 'disabled')),
+  status text not null default 'pending' check (status in ('pending', 'active', 'disabled')),
   notify_mode text not null default 'email' check (notify_mode in ('email', 'none')),
   created_at timestamptz not null default now()
 );
@@ -107,7 +107,8 @@ set search_path = public
 as $$
 begin
   update public.members
-  set user_id = new.id
+  set user_id = new.id,
+      status = 'active'
   where lower(email) = lower(new.email)
     and user_id is null;
 

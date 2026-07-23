@@ -27,7 +27,29 @@ export async function proxy(request: NextRequest) {
 
   // Refreshes the session cookie if needed. Do not add logic between
   // createServerClient and this call, and do not remove getClaims().
-  await supabase.auth.getClaims();
+  const { data } = await supabase.auth.getClaims();
+  const claims = data?.claims ?? null;
+
+  if (request.nextUrl.pathname.startsWith("/admin")) {
+    if (!claims) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.searchParams.set("redirectTo", request.nextUrl.pathname);
+      return NextResponse.redirect(url);
+    }
+
+    const { data: member } = await supabase
+      .from("members")
+      .select("role")
+      .eq("user_id", claims.sub)
+      .maybeSingle();
+
+    if (member?.role !== "admin") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/";
+      return NextResponse.redirect(url);
+    }
+  }
 
   return supabaseResponse;
 }
