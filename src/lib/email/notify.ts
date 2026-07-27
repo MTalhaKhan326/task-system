@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { resend, EMAIL_FROM_ADDRESS } from "./resend";
+import { getMailTransporter, EMAIL_FROM_ADDRESS } from "./mailer";
 import { renderTemplate, type EventType, type EventData } from "./templates";
 
 type NotifyParams<T extends EventType> = {
@@ -18,7 +18,7 @@ type NotifyParams<T extends EventType> = {
  * `members`, and this is a system-generated side effect of the mutation,
  * not something that should depend on the caller's own read access.
  *
- * Never throws: an inner try/catch around the Resend call captures the
+ * Never throws: an inner try/catch around the SMTP send captures the
  * send outcome for the log row, and an outer try/catch guarantees this
  * function can't fail the mutation that triggered it, even if the
  * lookup or the log insert itself goes wrong.
@@ -54,18 +54,20 @@ export async function notify<T extends EventType>(params: NotifyParams<T>) {
     const { subject, html } = renderTemplate(eventType, actorName, data);
 
     let sendError: string | null = null;
-    try {
-      const { error } = await resend.emails.send({
-        from: EMAIL_FROM_ADDRESS,
-        to: recipient.email,
-        subject,
-        html,
-      });
-      if (error) {
-        sendError = error.message;
+    const mailer = getMailTransporter();
+    if (!mailer) {
+      sendError = "SMTP is not configured.";
+    } else {
+      try {
+        await mailer.sendMail({
+          from: EMAIL_FROM_ADDRESS,
+          to: recipient.email,
+          subject,
+          html,
+        });
+      } catch (err) {
+        sendError = err instanceof Error ? err.message : "Unknown error sending email.";
       }
-    } catch (err) {
-      sendError = err instanceof Error ? err.message : "Unknown error sending email.";
     }
 
     await admin.from("notifications").insert({

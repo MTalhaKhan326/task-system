@@ -1,3 +1,8 @@
+// Not in the original .env.local list — add APP_URL there once deployed
+// (e.g. https://tasks.eternity-healthclub.com). Falls back to localhost
+// for local dev so links still work while testing.
+const APP_URL = (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
+
 export function emailShell(preheader: string, bodyHtml: string) {
   return `<!doctype html>
 <html>
@@ -10,6 +15,14 @@ export function emailShell(preheader: string, bodyHtml: string) {
             <tr>
               <td style="font-size:14px;color:#18181b;line-height:1.5;">
                 ${bodyHtml}
+                <p style="margin:24px 0 0;">
+                  <a
+                    href="${APP_URL}/tasks"
+                    style="display:inline-block;background-color:#18181b;color:#ffffff;padding:10px 20px;border-radius:9999px;text-decoration:none;font-size:14px;"
+                  >
+                    View in portal
+                  </a>
+                </p>
               </td>
             </tr>
           </table>

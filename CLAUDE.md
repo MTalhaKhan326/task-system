@@ -3,12 +3,12 @@
 Internal tool for a fitness company. Admins assign tasks to individuals or groups; members update status.
 
 ## Stack
-Next.js 16 (App Router, TypeScript, src/), Tailwind, Supabase (Postgres + Auth + RLS), Resend for email. No n8n, no other services.
+Next.js 16 (App Router, TypeScript, src/), Tailwind, Supabase (Postgres + Auth + RLS), email sent via SMTP (nodemailer) using the company mailbox directly. No n8n, no other services, no third-party email API (Resend was tried and rejected).
 
 ## Env vars (already in .env.local)
-NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, SUPABASE_SECRET_KEY, RESEND_API_KEY
+NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, SUPABASE_SECRET_KEY, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, EMAIL_FROM_ADDRESS, APP_URL (base URL used to build the "View in portal" link in emails; falls back to localhost if unset)
 Supabase uses the new key format (sb_publishable_/sb_secret_), not anon/service_role.
-The secret key is server-only and must never appear in client components or NEXT_PUBLIC_ vars.
+The secret key and SMTP_PASSWORD are server-only and must never appear in client components or NEXT_PUBLIC_ vars.
 
 ## Roles
 - admin: create/update/delete tasks, invite members by email, create groups, see all tasks
@@ -30,7 +30,7 @@ The secret key is server-only and must never appear in client components or NEXT
 ## RLS — required on every table
 Members read tasks only via a matching row in task_assignees. Members may update only the status column. Admins have full access.
 
-## Email (Resend, sent from API routes)
+## Email (SMTP via nodemailer, sent from API routes)
 assigned → assignees; updated → assignees; reassigned → new + old; deleted → assignees at deletion; status changed → task creator; comment → creator + other assignees.
 A failed email must never fail the mutation: wrap sends in try/catch and log the outcome to notifications.
 

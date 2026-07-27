@@ -18,19 +18,17 @@ export default async function LoginPage({
   }
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center bg-zinc-50 px-4 dark:bg-black">
-      <div className="w-full max-w-sm rounded-lg border border-zinc-200 bg-white p-8 dark:border-zinc-800 dark:bg-black">
-        <h1 className="mb-6 text-2xl font-semibold text-black dark:text-zinc-50">
-          Log in
-        </h1>
+    <div className="flex flex-1 flex-col items-center justify-center bg-cream px-4">
+      <div className="w-full max-w-sm rounded-lg border border-cream-dark bg-white p-8">
+        <h1 className="mb-6 font-display text-3xl tracking-wide text-ink uppercase">Log in</h1>
 
         {params.message && (
-          <p className="mb-4 rounded bg-zinc-100 p-3 text-sm text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
+          <p className="mb-4 rounded bg-brand-soft p-3 text-sm text-brand">
             {params.message}
           </p>
         )}
         {params.error && (
-          <p className="mb-4 rounded bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+          <p className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             {params.error}
           </p>
         )}
@@ -38,29 +36,29 @@ export default async function LoginPage({
         <form action="/auth/login" method="POST" className="flex flex-col gap-4">
           <input type="hidden" name="redirectTo" value={params.redirectTo ?? "/"} />
 
-          <label className="flex flex-col gap-1 text-sm text-zinc-700 dark:text-zinc-300">
+          <label className="flex flex-col gap-1 text-sm text-ink/80">
             Email
             <input
               type="email"
               name="email"
               required
-              className="rounded border border-zinc-300 px-3 py-2 text-black dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+              className="rounded border border-cream-dark px-3 py-2 text-ink"
             />
           </label>
 
-          <label className="flex flex-col gap-1 text-sm text-zinc-700 dark:text-zinc-300">
+          <label className="flex flex-col gap-1 text-sm text-ink/80">
             Password
             <input
               type="password"
               name="password"
               required
-              className="rounded border border-zinc-300 px-3 py-2 text-black dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+              className="rounded border border-cream-dark px-3 py-2 text-ink"
             />
           </label>
 
           <button
             type="submit"
-            className="mt-2 rounded-full bg-foreground px-5 py-2 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
+            className="mt-2 rounded-full bg-brand px-5 py-2 text-white transition-colors hover:bg-brand-dark"
           >
             Log in
           </button>
@@ -68,7 +66,7 @@ export default async function LoginPage({
 
         <Link
           href="/signup"
-          className="mt-4 block text-center text-sm text-zinc-600 hover:underline dark:text-zinc-400"
+          className="mt-4 block text-center text-sm text-ink/50 hover:text-brand hover:underline"
         >
           Need an account? Sign up
         </Link>

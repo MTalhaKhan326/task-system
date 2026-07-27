@@ -1,6 +1,6 @@
 "use client";
 
-export function DeleteGroupButton({ actionUrl }: { actionUrl: string }) {
+export function DeleteMemberButton({ actionUrl }: { actionUrl: string }) {
   return (
     <form
       action={actionUrl}
@@ -8,7 +8,7 @@ export function DeleteGroupButton({ actionUrl }: { actionUrl: string }) {
       onSubmit={(event) => {
         if (
           !confirm(
-            "Delete this group? Members already assigned to tasks through it will keep those assignments."
+            "Delete this member? They lose access immediately, but their task history and comments are kept."
           )
         ) {
           event.preventDefault();

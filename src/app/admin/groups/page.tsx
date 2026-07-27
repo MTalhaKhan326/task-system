@@ -40,10 +40,10 @@ export default async function AdminGroupsPage({
   const memberOptions = members ?? [];
 
   return (
-    <div className="flex flex-1 flex-col items-center bg-zinc-50 px-4 py-16 dark:bg-black">
+    <div className="flex flex-1 flex-col items-center bg-cream px-4 py-16">
       <div className="w-full max-w-2xl">
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">Groups</h1>
+          <h1 className="font-display text-3xl tracking-wide text-ink uppercase">Groups</h1>
           <GroupDialog
             triggerLabel="New group"
             heading="New group"
@@ -52,30 +52,30 @@ export default async function AdminGroupsPage({
         </div>
 
         {params.error && (
-          <p className="mb-4 rounded bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+          <p className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             {params.error}
           </p>
         )}
         {params.created && (
-          <p className="mb-4 rounded bg-zinc-100 p-3 text-sm text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
+          <p className="mb-4 rounded bg-brand-soft p-3 text-sm text-brand">
             Created &ldquo;{params.created}&rdquo;.
           </p>
         )}
         {params.updated && (
-          <p className="mb-4 rounded bg-zinc-100 p-3 text-sm text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
+          <p className="mb-4 rounded bg-brand-soft p-3 text-sm text-brand">
             {params.updated === "membership"
               ? "Membership updated."
               : `Renamed to “${params.updated}”.`}
           </p>
         )}
         {params.deleted && (
-          <p className="mb-4 rounded bg-zinc-100 p-3 text-sm text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
+          <p className="mb-4 rounded bg-brand-soft p-3 text-sm text-brand">
             Group deleted. Existing task assignments were not affected.
           </p>
         )}
 
         {groupsError ? (
-          <p className="rounded bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+          <p className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             {groupsError.message}
           </p>
         ) : (
@@ -88,19 +88,17 @@ export default async function AdminGroupsPage({
               return (
                 <div
                   key={group.id}
-                  className="rounded border border-zinc-200 p-4 dark:border-zinc-800"
+                  className="rounded border border-cream-dark bg-white p-4"
                 >
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-black dark:text-zinc-50">
-                      {group.name}
-                    </span>
-                    <span className="text-xs text-zinc-500 dark:text-zinc-500">
+                    <span className="font-medium text-ink">{group.name}</span>
+                    <span className="text-xs text-ink/50">
                       {currentMembers.length} member{currentMembers.length === 1 ? "" : "s"}
                     </span>
                   </div>
 
                   {currentMembers.length > 0 && (
-                    <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-500">
+                    <p className="mt-1 text-xs text-ink/50">
                       {currentMembers.map((m) => m.full_name ?? m.email).join(", ")}
                     </p>
                   )}
@@ -124,9 +122,7 @@ export default async function AdminGroupsPage({
               );
             })}
             {(groups ?? []).length === 0 && (
-              <p className="text-center text-sm text-zinc-500 dark:text-zinc-500">
-                No groups yet.
-              </p>
+              <p className="text-center text-sm text-ink/50">No groups yet.</p>
             )}
           </div>
         )}

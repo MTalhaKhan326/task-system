@@ -40,8 +40,8 @@ export function TaskDialog({
         onClick={() => dialogRef.current?.showModal()}
         className={
           small
-            ? "rounded border border-zinc-300 px-2 py-1 text-xs text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
-            : "rounded-full bg-foreground px-5 py-2 text-sm text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
+            ? "rounded border border-cream-dark px-2 py-1 text-xs text-ink/80 hover:bg-cream-mid"
+            : "rounded-full bg-brand px-5 py-2 text-sm text-white transition-colors hover:bg-brand-dark"
         }
       >
         {triggerLabel}
@@ -49,39 +49,54 @@ export function TaskDialog({
 
       <dialog
         ref={dialogRef}
-        className="w-full max-w-md rounded-lg border border-zinc-200 bg-white p-0 text-black backdrop:bg-black/40 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50"
+        onClick={(event) => {
+          if (event.target === dialogRef.current) {
+            dialogRef.current?.close();
+          }
+        }}
+        className="fixed top-1/2 left-1/2 m-0 max-h-[85vh] w-[90vw] max-w-md -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-cream-dark bg-white p-0 text-ink shadow-xl backdrop:bg-ink/40"
       >
         <form action={actionUrl} method="POST" className="flex flex-col gap-4 p-6">
-          <h2 className="text-lg font-semibold">{heading}</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">{heading}</h2>
+            <button
+              type="button"
+              onClick={() => dialogRef.current?.close()}
+              aria-label="Close"
+              className="text-xl leading-none text-ink/40 hover:text-ink/70"
+            >
+              &times;
+            </button>
+          </div>
 
-          <label className="flex flex-col gap-1 text-sm text-zinc-700 dark:text-zinc-300">
+          <label className="flex flex-col gap-1 text-sm text-ink/80">
             Title
             <input
               type="text"
               name="title"
               required
               defaultValue={defaultValues?.title}
-              className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+              className="rounded border border-cream-dark px-3 py-2"
             />
           </label>
 
-          <label className="flex flex-col gap-1 text-sm text-zinc-700 dark:text-zinc-300">
+          <label className="flex flex-col gap-1 text-sm text-ink/80">
             Description
             <textarea
               name="description"
               defaultValue={defaultValues?.description ?? ""}
               rows={3}
-              className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+              className="rounded border border-cream-dark px-3 py-2"
             />
           </label>
 
-          <div className="flex gap-4">
-            <label className="flex flex-1 flex-col gap-1 text-sm text-zinc-700 dark:text-zinc-300">
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <label className="flex flex-1 flex-col gap-1 text-sm text-ink/80">
               Priority
               <select
                 name="priority"
                 defaultValue={defaultValues?.priority ?? "medium"}
-                className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+                className="rounded border border-cream-dark px-3 py-2"
               >
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
@@ -89,35 +104,33 @@ export function TaskDialog({
               </select>
             </label>
 
-            <label className="flex flex-1 flex-col gap-1 text-sm text-zinc-700 dark:text-zinc-300">
+            <label className="flex flex-1 flex-col gap-1 text-sm text-ink/80">
               Due date
               <input
                 type="date"
                 name="dueDate"
                 defaultValue={defaultValues?.dueDate ?? ""}
-                className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+                className="rounded border border-cream-dark px-3 py-2"
               />
             </label>
           </div>
 
-          <fieldset className="rounded border border-zinc-200 p-3 dark:border-zinc-800">
-            <legend className="px-1 text-sm text-zinc-700 dark:text-zinc-300">Assign to</legend>
+          <fieldset className="rounded border border-cream-dark p-3">
+            <legend className="px-1 text-sm text-ink/80">Assign to</legend>
             <div className="max-h-40 overflow-y-auto">
               {members.length === 0 && groups.length === 0 && (
-                <p className="text-xs text-zinc-500 dark:text-zinc-500">
-                  No members or groups yet.
-                </p>
+                <p className="text-xs text-ink/50">No members or groups yet.</p>
               )}
 
               {groups.length > 0 && (
                 <div className="mb-2">
-                  <p className="mb-1 text-xs font-medium uppercase text-zinc-500 dark:text-zinc-500">
+                  <p className="mb-1 text-xs font-medium uppercase text-ink/50">
                     Groups
                   </p>
                   {groups.map((group) => (
                     <label
                       key={group.id}
-                      className="flex items-center gap-2 py-0.5 text-sm text-zinc-700 dark:text-zinc-300"
+                      className="flex items-center gap-2 py-0.5 text-sm text-ink/80"
                     >
                       <input
                         type="checkbox"
@@ -133,13 +146,13 @@ export function TaskDialog({
 
               {members.length > 0 && (
                 <div>
-                  <p className="mb-1 text-xs font-medium uppercase text-zinc-500 dark:text-zinc-500">
+                  <p className="mb-1 text-xs font-medium uppercase text-ink/50">
                     Members
                   </p>
                   {members.map((member) => (
                     <label
                       key={member.id}
-                      className="flex items-center gap-2 py-0.5 text-sm text-zinc-700 dark:text-zinc-300"
+                      className="flex items-center gap-2 py-0.5 text-sm text-ink/80"
                     >
                       <input
                         type="checkbox"
@@ -159,13 +172,13 @@ export function TaskDialog({
             <button
               type="button"
               onClick={() => dialogRef.current?.close()}
-              className="rounded border border-zinc-300 px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+              className="rounded border border-cream-dark px-4 py-2 text-sm text-ink/80 hover:bg-cream-mid"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="rounded-full bg-foreground px-5 py-2 text-sm text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
+              className="rounded-full bg-brand px-5 py-2 text-sm text-white transition-colors hover:bg-brand-dark"
             >
               Save
             </button>

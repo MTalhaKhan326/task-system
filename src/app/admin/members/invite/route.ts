@@ -33,6 +33,41 @@ export async function POST(request: NextRequest) {
   }
 
   const admin = createAdminClient();
+
+  // email is unique, and deleting a member only ever sets status to
+  // 'disabled' — the row still exists — so re-inviting the same
+  // address has to reactivate that row instead of inserting a
+  // duplicate, which would otherwise just fail with "already a
+  // member" forever.
+  const { data: existing } = await admin
+    .from("members")
+    .select("id, status, user_id")
+    .eq("email", email)
+    .maybeSingle();
+
+  if (existing) {
+    if (existing.status !== "disabled") {
+      membersUrl.searchParams.set("error", "That email is already a member.");
+      return NextResponse.redirect(membersUrl, { status: 303 });
+    }
+
+    // If they'd already signed up before being deleted, their auth
+    // account and password still work — reactivate straight to
+    // 'active' rather than making them sign up again.
+    const { error: reactivateError } = await admin
+      .from("members")
+      .update({ status: existing.user_id ? "active" : "pending" })
+      .eq("id", existing.id);
+
+    if (reactivateError) {
+      membersUrl.searchParams.set("error", reactivateError.message);
+      return NextResponse.redirect(membersUrl, { status: 303 });
+    }
+
+    membersUrl.searchParams.set("invited", email);
+    return NextResponse.redirect(membersUrl, { status: 303 });
+  }
+
   const { error } = await admin.from("members").insert({ email, status: "pending" });
 
   if (error) {
