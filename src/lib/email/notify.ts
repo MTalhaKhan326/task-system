@@ -4,7 +4,7 @@ import { renderTemplate, type EventType, type EventData } from "./templates";
 
 type NotifyParams<T extends EventType> = {
   eventType: T;
-  taskId: string;
+  taskId: string | null;
   actorId: string;
   recipientId: string;
   data: EventData[T];

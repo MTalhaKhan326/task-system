@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 export default async function SignupPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; email?: string }>;
 }) {
   const params = await searchParams;
   const supabase = await createClient();
@@ -35,6 +35,7 @@ export default async function SignupPage({
               type="email"
               name="email"
               required
+              defaultValue={params.email ?? ""}
               className="rounded border border-cream-dark px-3 py-2 text-ink"
             />
           </label>

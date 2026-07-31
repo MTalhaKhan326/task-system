@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { notify } from "@/lib/email/notify";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -14,11 +15,11 @@ export async function POST(request: NextRequest) {
 
   const { data: member } = await supabase
     .from("members")
-    .select("role")
+    .select("id, role")
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (member?.role !== "admin") {
+  if (!member || member.role !== "admin") {
     return NextResponse.redirect(new URL("/", request.url), { status: 303 });
   }
 
@@ -53,10 +54,14 @@ export async function POST(request: NextRequest) {
 
     // If they'd already signed up before being deleted, their auth
     // account and password still work — reactivate straight to
-    // 'active' rather than making them sign up again.
+    // 'active' rather than making them sign up again. Only send the
+    // invite email when they actually need the signup link (still
+    // 'pending') — someone going straight back to 'active' already
+    // has an account and just needs to log in.
+    const reactivatedStatus = existing.user_id ? "active" : "pending";
     const { error: reactivateError } = await admin
       .from("members")
-      .update({ status: existing.user_id ? "active" : "pending" })
+      .update({ status: reactivatedStatus })
       .eq("id", existing.id);
 
     if (reactivateError) {
@@ -64,19 +69,41 @@ export async function POST(request: NextRequest) {
       return NextResponse.redirect(membersUrl, { status: 303 });
     }
 
+    if (reactivatedStatus === "pending") {
+      await notify({
+        eventType: "invited",
+        taskId: null,
+        actorId: member.id,
+        recipientId: existing.id,
+        data: { email },
+      });
+    }
+
     membersUrl.searchParams.set("invited", email);
     return NextResponse.redirect(membersUrl, { status: 303 });
   }
 
-  const { error } = await admin.from("members").insert({ email, status: "pending" });
+  const { data: newMember, error } = await admin
+    .from("members")
+    .insert({ email, status: "pending" })
+    .select("id")
+    .single();
 
-  if (error) {
+  if (error || !newMember) {
     membersUrl.searchParams.set(
       "error",
-      error.code === "23505" ? "That email is already a member." : error.message
+      error?.code === "23505" ? "That email is already a member." : error?.message ?? "Could not invite member."
     );
     return NextResponse.redirect(membersUrl, { status: 303 });
   }
+
+  await notify({
+    eventType: "invited",
+    taskId: null,
+    actorId: member.id,
+    recipientId: newMember.id,
+    data: { email },
+  });
 
   membersUrl.searchParams.set("invited", email);
   return NextResponse.redirect(membersUrl, { status: 303 });

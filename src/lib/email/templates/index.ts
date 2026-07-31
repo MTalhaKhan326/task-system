@@ -4,6 +4,7 @@ import { renderReassigned, type ReassignedData } from "./reassigned";
 import { renderDeleted, type DeletedData } from "./deleted";
 import { renderStatusChanged, type StatusChangedData } from "./status-changed";
 import { renderComment, type CommentData } from "./comment";
+import { renderInvited, type InvitedData } from "./invited";
 
 export type EventType =
   | "assigned"
@@ -11,7 +12,8 @@ export type EventType =
   | "reassigned"
   | "deleted"
   | "status_changed"
-  | "comment";
+  | "comment"
+  | "invited";
 
 export type EventData = {
   assigned: AssignedData;
@@ -20,6 +22,7 @@ export type EventData = {
   deleted: DeletedData;
   status_changed: StatusChangedData;
   comment: CommentData;
+  invited: InvitedData;
 };
 
 export type RenderedEmail = { subject: string; html: string };
@@ -42,6 +45,8 @@ export function renderTemplate<T extends EventType>(
       return renderStatusChanged(actorName, data as EventData["status_changed"]);
     case "comment":
       return renderComment(actorName, data as EventData["comment"]);
+    case "invited":
+      return renderInvited(actorName, data as EventData["invited"]);
     default: {
       const exhaustive: never = eventType;
       throw new Error(`Unhandled event type: ${exhaustive}`);
