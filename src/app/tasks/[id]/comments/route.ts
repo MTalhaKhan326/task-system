@@ -58,7 +58,7 @@ export async function POST(
         task.created_by,
         ...(task.task_assignees ?? []).map((row) => row.member_id),
       ])
-    );
+    ).filter((id): id is string => id !== null);
 
     await notifyMany(recipientIds, {
       eventType: "comment",

@@ -6,7 +6,7 @@ type NotifyParams<T extends EventType> = {
   eventType: T;
   taskId: string | null;
   actorId: string;
-  recipientId: string;
+  recipientId: string | null;
   data: EventData[T];
 };
 
@@ -26,8 +26,10 @@ type NotifyParams<T extends EventType> = {
 export async function notify<T extends EventType>(params: NotifyParams<T>) {
   const { eventType, taskId, actorId, recipientId, data } = params;
 
-  if (actorId === recipientId) {
-    // Don't notify someone about their own action.
+  if (!recipientId || actorId === recipientId) {
+    // No recipient (e.g. the task creator was deleted, and
+    // created_by is now null), or don't notify someone about their
+    // own action.
     return;
   }
 

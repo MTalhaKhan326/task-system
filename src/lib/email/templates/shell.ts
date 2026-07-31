@@ -1,7 +1,7 @@
-// Not in the original .env.local list — add APP_URL there once deployed
-// (e.g. https://tasks.eternity-healthclub.com). Falls back to localhost
-// for local dev so links still work while testing.
-export const APP_URL = (process.env.APP_URL ?? "https://task-system-roan.vercel.app/").replace(/\/$/, "");
+// Falls back to the live deployment if APP_URL isn't set in the
+// environment (e.g. a local run without .env.local's APP_URL line),
+// so email links never accidentally point at localhost.
+export const APP_URL = (process.env.APP_URL ?? "https://task-system-roan.vercel.app").replace(/\/$/, "");
 
 export function emailShell(
   preheader: string,

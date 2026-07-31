@@ -35,11 +35,12 @@ export async function POST(request: NextRequest) {
 
   const admin = createAdminClient();
 
-  // email is unique, and deleting a member only ever sets status to
-  // 'disabled' — the row still exists — so re-inviting the same
-  // address has to reactivate that row instead of inserting a
-  // duplicate, which would otherwise just fail with "already a
-  // member" forever.
+  // Deleting a member now removes the row entirely (migration 009), so
+  // normally no row exists here at all for a re-invite. This only
+  // catches leftovers from before that change — a 'disabled' row from
+  // the old soft-delete model. Clean it up (and its old auth account,
+  // if any) so the insert below creates a genuinely fresh row, same as
+  // any new invite.
   const { data: existing } = await admin
     .from("members")
     .select("id, status, user_id")
@@ -52,35 +53,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.redirect(membersUrl, { status: 303 });
     }
 
-    // If they'd already signed up before being deleted, their auth
-    // account and password still work — reactivate straight to
-    // 'active' rather than making them sign up again. Only send the
-    // invite email when they actually need the signup link (still
-    // 'pending') — someone going straight back to 'active' already
-    // has an account and just needs to log in.
-    const reactivatedStatus = existing.user_id ? "active" : "pending";
-    const { error: reactivateError } = await admin
-      .from("members")
-      .update({ status: reactivatedStatus })
-      .eq("id", existing.id);
-
-    if (reactivateError) {
-      membersUrl.searchParams.set("error", reactivateError.message);
-      return NextResponse.redirect(membersUrl, { status: 303 });
+    if (existing.user_id) {
+      await admin.auth.admin.deleteUser(existing.user_id);
     }
-
-    if (reactivatedStatus === "pending") {
-      await notify({
-        eventType: "invited",
-        taskId: null,
-        actorId: member.id,
-        recipientId: existing.id,
-        data: { email },
-      });
-    }
-
-    membersUrl.searchParams.set("invited", email);
-    return NextResponse.redirect(membersUrl, { status: 303 });
+    await admin.from("members").delete().eq("id", existing.id);
   }
 
   const { data: newMember, error } = await admin

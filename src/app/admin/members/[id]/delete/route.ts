@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(
   request: NextRequest,
@@ -32,9 +33,11 @@ export async function POST(
     return NextResponse.redirect(membersUrl, { status: 303 });
   }
 
-  const { data: target } = await supabase
+  const admin = createAdminClient();
+
+  const { data: target } = await admin
     .from("members")
-    .select("role")
+    .select("role, user_id")
     .eq("id", memberId)
     .maybeSingle();
 
@@ -44,11 +47,10 @@ export async function POST(
   }
 
   if (target.role === "admin") {
-    const { count } = await supabase
+    const { count } = await admin
       .from("members")
       .select("id", { count: "exact", head: true })
-      .eq("role", "admin")
-      .neq("status", "disabled");
+      .eq("role", "admin");
 
     if ((count ?? 0) <= 1) {
       membersUrl.searchParams.set("error", "Can't delete the last remaining admin.");
@@ -56,10 +58,24 @@ export async function POST(
     }
   }
 
-  const { error } = await supabase
-    .from("members")
-    .update({ status: "disabled" })
-    .eq("id", memberId);
+  // Fully removes this person: their Supabase Auth account (so a
+  // future re-invite is a genuinely fresh signup, not a password they
+  // still remember) and their members row. task_assignees,
+  // task_comments, notifications, tasks.created_by, and
+  // groups.created_by all detach via ON DELETE SET NULL rather than
+  // cascading (migration 009), so historical records survive with the
+  // member reference cleared instead of being destroyed.
+  // group_members still cascades — a membership record has no meaning
+  // to keep once the member is gone.
+  if (target.user_id) {
+    const { error: authDeleteError } = await admin.auth.admin.deleteUser(target.user_id);
+    if (authDeleteError) {
+      membersUrl.searchParams.set("error", authDeleteError.message);
+      return NextResponse.redirect(membersUrl, { status: 303 });
+    }
+  }
+
+  const { error } = await admin.from("members").delete().eq("id", memberId);
 
   if (error) {
     membersUrl.searchParams.set("error", error.message);
