@@ -3,6 +3,7 @@ import { escapeHtml } from "./escape-html";
 
 export type UpdatedData = {
   taskTitle: string;
+  dueDate?: string | null;
 };
 
 export function renderUpdated(actorName: string, data: UpdatedData) {
@@ -13,7 +14,8 @@ export function renderUpdated(actorName: string, data: UpdatedData) {
     subject: `Task updated: ${data.taskTitle}`,
     html: emailShell(
       `${actorName} updated a task you're on`,
-      `<p><strong>${name}</strong> updated <strong>${title}</strong>.</p>`
+      `<p><strong>${name}</strong> updated <strong>${title}</strong>.</p>
+       ${data.dueDate ? `<p>New due date: ${data.dueDate}.</p>` : ""}`
     ),
   };
 }

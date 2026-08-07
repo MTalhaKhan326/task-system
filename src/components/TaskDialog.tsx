@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { forwardRef, useImperativeHandle, useRef } from "react";
 
 type MemberOption = { id: string; email: string; full_name: string | null };
 type GroupOption = { id: string; name: string };
@@ -19,33 +19,42 @@ type TaskDialogProps = {
     memberIds?: string[];
     groupId?: string | null;
   };
+  parentTaskId?: string;
   small?: boolean;
+  // When set, no button is rendered — the caller opens the dialog
+  // itself via the forwarded ref's open() method. Used by the
+  // calendar, where clicking the task chip itself opens the edit
+  // dialog rather than a separate visible button.
+  hideTrigger?: boolean;
 };
 
-export function TaskDialog({
-  triggerLabel,
-  heading,
-  actionUrl,
-  members,
-  groups,
-  defaultValues,
-  small,
-}: TaskDialogProps) {
+export type TaskDialogHandle = { open: () => void };
+
+export const TaskDialog = forwardRef<TaskDialogHandle, TaskDialogProps>(function TaskDialog(
+  { triggerLabel, heading, actionUrl, members, groups, defaultValues, parentTaskId, small, hideTrigger },
+  ref
+) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    open: () => dialogRef.current?.showModal(),
+  }));
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => dialogRef.current?.showModal()}
-        className={
-          small
-            ? "rounded border border-cream-dark px-2 py-1 text-xs text-ink/80 hover:bg-cream-mid"
-            : "rounded-full bg-brand px-5 py-2 text-sm text-white transition-colors hover:bg-brand-dark"
-        }
-      >
-        {triggerLabel}
-      </button>
+      {!hideTrigger && (
+        <button
+          type="button"
+          onClick={() => dialogRef.current?.showModal()}
+          className={
+            small
+              ? "rounded border border-cream-dark px-2 py-1 text-xs text-ink/80 hover:bg-cream-mid"
+              : "rounded-full bg-brand px-5 py-2 text-sm text-white transition-colors hover:bg-brand-dark"
+          }
+        >
+          {triggerLabel}
+        </button>
+      )}
 
       <dialog
         ref={dialogRef}
@@ -57,6 +66,7 @@ export function TaskDialog({
         className="fixed top-1/2 left-1/2 m-0 max-h-[85vh] w-[90vw] max-w-md -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-cream-dark bg-white p-0 text-ink shadow-xl backdrop:bg-ink/40"
       >
         <form action={actionUrl} method="POST" className="flex flex-col gap-4 p-6">
+          {parentTaskId && <input type="hidden" name="parentTaskId" value={parentTaskId} />}
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">{heading}</h2>
             <button
@@ -187,4 +197,4 @@ export function TaskDialog({
       </dialog>
     </>
   );
-}
+});

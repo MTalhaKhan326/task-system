@@ -118,7 +118,7 @@ export async function POST(
           eventType: "updated",
           taskId,
           actorId: adminMember.id,
-          data: { taskTitle: title },
+          data: { taskTitle: title, dueDate },
         })
       : Promise.resolve(),
   ]);

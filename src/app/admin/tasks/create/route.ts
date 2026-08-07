@@ -29,8 +29,14 @@ export async function POST(request: NextRequest) {
   const dueDate = String(formData.get("dueDate") ?? "").trim() || null;
   const memberIds = formData.getAll("memberIds").map(String);
   const groupIds = formData.getAll("groupIds").map(String);
+  const parentTaskId = String(formData.get("parentTaskId") ?? "").trim() || null;
 
   const tasksUrl = new URL("/admin/tasks", request.url);
+  // A subtask is created from, and belongs on, the List view — land
+  // back there instead of the default Board view.
+  if (parentTaskId) {
+    tasksUrl.searchParams.set("view", "list");
+  }
 
   if (!title) {
     tasksUrl.searchParams.set("error", "Title is required.");
@@ -58,6 +64,7 @@ export async function POST(request: NextRequest) {
       due_date: dueDate,
       created_by: adminMember.id,
       assigned_group_id: assignedGroupId,
+      parent_task_id: parentTaskId,
     })
     .select("id")
     .single();
