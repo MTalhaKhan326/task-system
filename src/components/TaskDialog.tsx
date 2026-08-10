@@ -4,6 +4,7 @@ import { forwardRef, useImperativeHandle, useRef } from "react";
 
 type MemberOption = { id: string; email: string; full_name: string | null };
 type GroupOption = { id: string; name: string };
+type ParentTaskOption = { id: string; title: string };
 
 type TaskDialogProps = {
   triggerLabel: string;
@@ -19,7 +20,13 @@ type TaskDialogProps = {
     memberIds?: string[];
     groupId?: string | null;
   };
+  // Fixed parent — used by the "+ Add subtask" buttons, already scoped to
+  // one specific task.
   parentTaskId?: string;
+  // A pickable list of parent tasks — used by the general "New task"
+  // button, where the user chooses at creation time whether this becomes
+  // a subtask (pick one) or a new top-level task (leave as "None").
+  parentOptions?: ParentTaskOption[];
   small?: boolean;
   // When set, no button is rendered — the caller opens the dialog
   // itself via the forwarded ref's open() method. Used by the
@@ -31,14 +38,43 @@ type TaskDialogProps = {
 export type TaskDialogHandle = { open: () => void };
 
 export const TaskDialog = forwardRef<TaskDialogHandle, TaskDialogProps>(function TaskDialog(
-  { triggerLabel, heading, actionUrl, members, groups, defaultValues, parentTaskId, small, hideTrigger },
+  {
+    triggerLabel,
+    heading,
+    actionUrl,
+    members,
+    groups,
+    defaultValues,
+    parentTaskId,
+    parentOptions,
+    small,
+    hideTrigger,
+  },
   ref
 ) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const notifyInputRef = useRef<HTMLInputElement>(null);
+  const isEdit = Boolean(defaultValues);
 
   useImperativeHandle(ref, () => ({
     open: () => dialogRef.current?.showModal(),
   }));
+
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const sendEmail = window.confirm(
+      isEdit
+        ? "Send an email notification about this change?"
+        : "Send an email notification to the people assigned to this task?"
+    );
+    if (notifyInputRef.current) {
+      notifyInputRef.current.value = sendEmail ? "true" : "false";
+    }
+    // Native submit — bypasses this handler (no infinite loop) and is safe
+    // since built-in validation already passed before onSubmit ever fired.
+    formRef.current?.submit();
+  }
 
   return (
     <>
@@ -58,15 +94,23 @@ export const TaskDialog = forwardRef<TaskDialogHandle, TaskDialogProps>(function
 
       <dialog
         ref={dialogRef}
-        onClick={(event) => {
+         onClick={(event) => {
+          event.stopPropagation();
           if (event.target === dialogRef.current) {
             dialogRef.current?.close();
           }
         }}
         className="fixed top-1/2 left-1/2 m-0 max-h-[85vh] w-[90vw] max-w-md -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-cream-dark bg-white p-0 text-ink shadow-xl backdrop:bg-ink/40"
       >
-        <form action={actionUrl} method="POST" className="flex flex-col gap-4 p-6">
+        <form
+          ref={formRef}
+          action={actionUrl}
+          method="POST"
+          onSubmit={handleSubmit}
+          className="flex flex-col gap-4 p-6"
+        >
           {parentTaskId && <input type="hidden" name="parentTaskId" value={parentTaskId} />}
+          <input type="hidden" name="notify" ref={notifyInputRef} defaultValue="true" />
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">{heading}</h2>
             <button
@@ -78,6 +122,24 @@ export const TaskDialog = forwardRef<TaskDialogHandle, TaskDialogProps>(function
               &times;
             </button>
           </div>
+
+          {parentOptions && (
+            <label className="flex flex-col gap-1 text-sm text-ink/80">
+              Subtask of
+              <select
+                name="parentTaskId"
+                defaultValue=""
+                className="rounded border border-cream-dark px-3 py-2"
+              >
+                <option value="">None — create as a new task</option>
+                {parentOptions.map((task) => (
+                  <option key={task.id} value={task.id}>
+                    {task.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
 
           <label className="flex flex-col gap-1 text-sm text-ink/80">
             Title

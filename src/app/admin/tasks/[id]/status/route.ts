@@ -31,7 +31,19 @@ export async function POST(
   const formData = await request.formData();
   const status = String(formData.get("status") ?? "");
 
-  const tasksUrl = new URL("/admin/tasks", request.url);
+  const referer = request.headers.get("referer");
+  let tasksUrl = new URL("/admin/tasks", request.url);
+  if (referer) {
+    try {
+      const refererUrl = new URL(referer);
+      if (refererUrl.origin === new URL(request.url).origin) {
+        tasksUrl = refererUrl;
+        tasksUrl.searchParams.delete("error");
+        tasksUrl.searchParams.delete("created");
+        tasksUrl.searchParams.delete("updated");
+      }
+    } catch {}
+  }  
 
   if (!STATUSES.includes(status)) {
     tasksUrl.searchParams.set("error", "Invalid status.");

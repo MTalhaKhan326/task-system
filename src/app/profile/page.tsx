@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { TwoFactorSetup } from "@/components/TwoFactorSetup";
 
 export default async function ProfilePage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; updated?: string }>;
+  searchParams: Promise<{ error?: string; updated?: string; message?: string }>;
 }) {
   const params = await searchParams;
   const supabase = await createClient();
@@ -22,6 +23,9 @@ export default async function ProfilePage({
     .eq("user_id", user.id)
     .maybeSingle();
 
+  const { data: factors } = await supabase.auth.mfa.listFactors();
+  const verifiedFactorId = factors?.totp.find((f) => f.status === "verified")?.id ?? null;
+
   return (
     <div className="flex flex-1 flex-col items-center bg-cream px-4 py-16">
       <div className="w-full max-w-sm rounded-lg border border-cream-dark bg-white p-8">
@@ -30,6 +34,11 @@ export default async function ProfilePage({
         {params.updated && (
           <p className="mb-4 rounded bg-brand-soft p-3 text-sm text-brand">
             Profile updated.
+          </p>
+        )}
+        {params.message && (
+          <p className="mb-4 rounded bg-brand-soft p-3 text-sm text-brand">
+            {params.message}
           </p>
         )}
         {params.error && (
@@ -67,6 +76,13 @@ export default async function ProfilePage({
             Save
           </button>
         </form>
+
+        <div className="mt-6 border-t border-cream-dark pt-6">
+          <h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-ink/50">
+            Two-factor authentication
+          </h2>
+          <TwoFactorSetup initialVerifiedFactorId={verifiedFactorId} />
+        </div>
       </div>
     </div>
   );

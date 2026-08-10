@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
   const memberIds = formData.getAll("memberIds").map(String);
   const groupIds = formData.getAll("groupIds").map(String);
   const parentTaskId = String(formData.get("parentTaskId") ?? "").trim() || null;
+  const notifyEnabled = String(formData.get("notify") ?? "true") !== "false";
 
   const tasksUrl = new URL("/admin/tasks", request.url);
   // A subtask is created from, and belongs on, the List view — land
@@ -79,12 +80,14 @@ export async function POST(request: NextRequest) {
       .from("task_assignees")
       .insert(assigneeIds.map((memberId) => ({ task_id: task.id, member_id: memberId })));
 
-    await notifyMany(assigneeIds, {
-      eventType: "assigned",
-      taskId: task.id,
-      actorId: adminMember.id,
-      data: { taskTitle: title, dueDate, priority },
-    });
+    if (notifyEnabled) {
+      await notifyMany(assigneeIds, {
+        eventType: "assigned",
+        taskId: task.id,
+        actorId: adminMember.id,
+        data: { taskTitle: title, dueDate, priority },
+      });
+    }
   }
 
   tasksUrl.searchParams.set("created", title);

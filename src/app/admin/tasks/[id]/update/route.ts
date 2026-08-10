@@ -33,8 +33,21 @@ export async function POST(
   const dueDate = String(formData.get("dueDate") ?? "").trim() || null;
   const memberIds = formData.getAll("memberIds").map(String);
   const groupIds = formData.getAll("groupIds").map(String);
+  const notifyEnabled = String(formData.get("notify") ?? "true") !== "false";
 
-  const tasksUrl = new URL("/admin/tasks", request.url);
+  const referer = request.headers.get("referer");
+  let tasksUrl = new URL("/admin/tasks", request.url);
+  if (referer) {
+    try {
+      const refererUrl = new URL(referer);
+      if (refererUrl.origin === new URL(request.url).origin) {
+        tasksUrl = refererUrl;
+        tasksUrl.searchParams.delete("error");
+        tasksUrl.searchParams.delete("created");
+        tasksUrl.searchParams.delete("updated");
+      }
+    } catch {}
+  }
 
   if (!title) {
     tasksUrl.searchParams.set("error", "Title is required.");
@@ -94,34 +107,36 @@ export async function POST(
       .in("member_id", toRemove);
   }
 
-  await Promise.all([
-    ...toAdd.map((recipientId) =>
-      notify({
-        eventType: "reassigned",
-        taskId,
-        actorId: adminMember.id,
-        recipientId,
-        data: { taskTitle: title, change: "added" },
-      })
-    ),
-    ...toRemove.map((recipientId) =>
-      notify({
-        eventType: "reassigned",
-        taskId,
-        actorId: adminMember.id,
-        recipientId,
-        data: { taskTitle: title, change: "removed" },
-      })
-    ),
-    unchanged.length > 0
-      ? notifyMany(unchanged, {
-          eventType: "updated",
+  if (notifyEnabled) {
+    await Promise.all([
+      ...toAdd.map((recipientId) =>
+        notify({
+          eventType: "reassigned",
           taskId,
           actorId: adminMember.id,
-          data: { taskTitle: title, dueDate },
+          recipientId,
+          data: { taskTitle: title, change: "added" },
         })
-      : Promise.resolve(),
-  ]);
+      ),
+      ...toRemove.map((recipientId) =>
+        notify({
+          eventType: "reassigned",
+          taskId,
+          actorId: adminMember.id,
+          recipientId,
+          data: { taskTitle: title, change: "removed" },
+        })
+      ),
+      unchanged.length > 0
+        ? notifyMany(unchanged, {
+            eventType: "updated",
+            taskId,
+            actorId: adminMember.id,
+            data: { taskTitle: title, dueDate },
+          })
+        : Promise.resolve(),
+    ]);
+  }
 
   tasksUrl.searchParams.set("updated", title);
   return NextResponse.redirect(tasksUrl, { status: 303 });

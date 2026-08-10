@@ -20,6 +20,7 @@ type TaskRow = {
   status: string;
   priority: string;
   due_date: string | null;
+  parent_task_id: string | null;
   task_comments: {
     id: string;
     body: string;
@@ -46,11 +47,23 @@ export default async function MemberTasksPage({
   const { data: tasks, error } = await supabase
     .from("tasks")
     .select(
-      "id, title, description, status, priority, due_date, task_comments(id, body, created_at, members(full_name, email))"
+      "id, title, description, status, priority, due_date, parent_task_id, task_comments(id, body, created_at, members(full_name, email))"
     )
     .is("deleted_at", null)
     .order("due_date", { ascending: true, nullsFirst: false })
     .returns<TaskRow[]>();
+
+  // Scoped to whatever this member can actually see under RLS (their own
+  // assigned tasks) — a parent or subtask only shows up here if it's also
+  // separately assigned to this member.
+  const tasksById: Record<string, TaskRow> = {};
+  const subtasksByParent: Record<string, TaskRow[]> = {};
+  for (const task of tasks ?? []) {
+    tasksById[task.id] = task;
+    if (task.parent_task_id) {
+      (subtasksByParent[task.parent_task_id] ??= []).push(task);
+    }
+  }
 
   return (
     <div className="flex flex-1 flex-col items-center bg-cream px-4 py-16">
@@ -69,20 +82,40 @@ export default async function MemberTasksPage({
           </p>
         ) : (
           <div className="flex flex-col gap-4">
-            {(tasks ?? []).map((task) => (
+            {(tasks ?? []).map((task) => {
+              const parent = task.parent_task_id ? tasksById[task.parent_task_id] : null;
+              const subtasks = subtasksByParent[task.id] ?? [];
+
+              return (
               <div
                 key={task.id}
                 className="rounded border border-cream-dark bg-white p-4"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <h2 className="font-medium text-ink">{task.title}</h2>
-                  <span className="shrink-0 rounded bg-cream-mid px-2 py-0.5 text-xs text-ink/70">
-                    {PRIORITY_LABEL[task.priority] ?? task.priority}
-                  </span>
+                  <h2 className="font-medium text-ink">
+                    {parent && <span className="text-ink/40">&#8618; </span>}
+                    {task.title}
+                  </h2>
+                  <div className="flex shrink-0 items-center gap-1">
+                    {parent && (
+                      <span className="rounded bg-cream-mid px-2 py-0.5 text-xs text-ink/50">
+                        Task: {parent.title}
+                      </span>
+                    )}
+                    <span className="rounded bg-cream-mid px-2 py-0.5 text-xs text-ink/70">
+                      {PRIORITY_LABEL[task.priority] ?? task.priority}
+                    </span>
+                  </div>
                 </div>
 
                 {task.description && (
                   <p className="mt-1 text-sm text-ink/70">{task.description}</p>
+                )}
+
+                {subtasks.length > 0 && (
+                  <p className="mt-1 text-xs text-ink/50">
+                    Subtasks: {subtasks.map((s) => s.title).join(", ")}
+                  </p>
                 )}
 
                 {task.due_date && (
@@ -155,7 +188,8 @@ export default async function MemberTasksPage({
                   </form>
                 </div>
               </div>
-            ))}
+              );
+            })}
             {(tasks ?? []).length === 0 && (
               <p className="text-center text-sm text-ink/50">
                 No tasks assigned to you.

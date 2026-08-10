@@ -228,11 +228,15 @@ export function CalendarView({ weeks, tasksByDate, members, groups }: CalendarVi
     const task = localTasksByDate[sourceDate].find((t) => t.id === taskId);
     if (!task) return;
 
+    const sendEmail = window.confirm("Send an email notification about this due date change?");
+
+    const movedTask = { ...task, dueDate: targetDate };
+
     const previous = localTasksByDate;
     setLocalTasksByDate((prev) => {
       const next = { ...prev };
       next[sourceDate] = next[sourceDate].filter((t) => t.id !== taskId);
-      next[targetDate] = [...(next[targetDate] ?? []), task];
+      next[targetDate] = [...(next[targetDate] ?? []), movedTask];
       return next;
     });
     setError(null);
@@ -241,7 +245,7 @@ export function CalendarView({ weeks, tasksByDate, members, groups }: CalendarVi
       const res = await fetch(`/admin/tasks/${taskId}/due-date`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dueDate: targetDate }),
+        body: JSON.stringify({ dueDate: targetDate, notify: sendEmail }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
@@ -261,7 +265,7 @@ export function CalendarView({ weeks, tasksByDate, members, groups }: CalendarVi
           {error}
         </p>
       )}
-      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      <DndContext id="task-calendar" sensors={sensors} onDragEnd={handleDragEnd}>
         <div className="rounded border border-cream-dark">
           <div className="grid grid-cols-7 gap-px bg-cream-dark">
             {WEEKDAY_LABELS.map((label) => (

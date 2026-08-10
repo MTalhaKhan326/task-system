@@ -121,6 +121,7 @@ export default async function AdminTasksPage({
             actionUrl="/admin/tasks/create"
             members={memberOptions}
             groups={groupOptions}
+            parentOptions={topLevelTasks.map((task) => ({ id: task.id, title: task.title }))}
           />
         </div>
 
@@ -367,7 +368,7 @@ export default async function AdminTasksPage({
         ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {STATUS_COLUMNS.map((column) => {
-              const columnTasks = topLevelTasks.filter((t) => t.status === column.key);
+              const columnTasks = (tasks ?? []).filter((t) => t.status === column.key);
               return (
                 <div
                   key={column.key}
@@ -381,6 +382,8 @@ export default async function AdminTasksPage({
                       const assignees = task.task_assignees
                         .map((row) => row.members)
                         .filter((m): m is NonNullable<typeof m> => m !== null);
+                      const parent = task.parent_task_id ? tasksById[task.parent_task_id] : null;
+                      const subtasks = subtasksByParent[task.id] ?? [];
 
                       return (
                         <div
@@ -388,14 +391,30 @@ export default async function AdminTasksPage({
                           className="rounded border border-cream-dark p-3 text-sm"
                         >
                           <div className="flex items-start justify-between gap-2">
-                            <span className="font-medium text-ink">{task.title}</span>
-                            <span className="shrink-0 rounded bg-cream-mid px-2 py-0.5 text-xs text-ink/70">
-                              {PRIORITY_LABEL[task.priority] ?? task.priority}
+                            <span className="font-medium text-ink">
+                              {parent && <span className="text-ink/40">&#8618; </span>}
+                              {task.title}
                             </span>
+                            <div className="flex shrink-0 items-center gap-1">
+                              {parent && (
+                                <span className="rounded bg-cream-mid px-2 py-0.5 text-xs text-ink/50">
+                                  Task: {parent.title}
+                                </span>
+                              )}
+                              <span className="rounded bg-cream-mid px-2 py-0.5 text-xs text-ink/70">
+                                {PRIORITY_LABEL[task.priority] ?? task.priority}
+                              </span>
+                            </div>
                           </div>
 
                           {task.description && (
                             <p className="mt-1 text-ink/70">{task.description}</p>
+                          )}
+
+                          {subtasks.length > 0 && (
+                            <p className="mt-1 text-xs text-ink/50">
+                              Subtasks: {subtasks.map((s) => s.title).join(", ")}
+                            </p>
                           )}
 
                           {task.due_date && (

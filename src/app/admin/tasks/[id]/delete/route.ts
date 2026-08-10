@@ -25,6 +25,19 @@ export async function POST(
   if (!adminMember || adminMember.role !== "admin") {
     return NextResponse.redirect(new URL("/", request.url), { status: 303 });
   }
+    
+  const referer = request.headers.get("referer");
+  let tasksUrl = new URL("/admin/tasks", request.url);
+  if (referer) {
+    try {
+      const refererUrl = new URL(referer);
+      if (refererUrl.origin === new URL(request.url).origin) {
+        tasksUrl = refererUrl;
+        tasksUrl.searchParams.delete("error");
+        tasksUrl.searchParams.delete("deleted");
+      }
+    } catch {}
+  }
 
   const { data: task } = await supabase
     .from("tasks")
@@ -49,5 +62,6 @@ export async function POST(
     }
   }
 
-  return NextResponse.redirect(new URL("/admin/tasks", request.url), { status: 303 });
+  tasksUrl.searchParams.set("deleted", "true");
+  return NextResponse.redirect(tasksUrl, { status: 303 });
 }

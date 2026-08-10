@@ -5,7 +5,11 @@ export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
-  const redirectTo = String(formData.get("redirectTo") ?? "/");
+  const rawRedirectTo = String(formData.get("redirectTo") ?? "/");
+  // Only allow same-app relative paths — never let a query param send the
+  // user's session off to an external origin after login.
+  const redirectTo =
+    rawRedirectTo.startsWith("/") && !rawRedirectTo.startsWith("//") ? rawRedirectTo : "/";
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -32,6 +36,13 @@ export async function POST(request: NextRequest) {
 
     const url = new URL("/login", request.url);
     url.searchParams.set("error", error.message);
+    url.searchParams.set("redirectTo", redirectTo);
+    return NextResponse.redirect(url, { status: 303 });
+  }
+
+  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (aal && aal.nextLevel === "aal2" && aal.currentLevel !== "aal2") {
+    const url = new URL("/login/verify", request.url);
     url.searchParams.set("redirectTo", redirectTo);
     return NextResponse.redirect(url, { status: 303 });
   }

@@ -49,6 +49,29 @@ export async function proxy(request: NextRequest) {
       url.pathname = "/";
       return NextResponse.redirect(url);
     }
+
+    // Two-factor authentication is required for admins. nextLevel is
+    // 'aal2' only once a verified TOTP factor exists on the account.
+    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aal) {
+      if (aal.nextLevel === "aal2" && aal.currentLevel !== "aal2") {
+        const url = request.nextUrl.clone();
+        url.pathname = "/login/verify";
+        url.searchParams.set("redirectTo", request.nextUrl.pathname);
+        return NextResponse.redirect(url);
+      }
+
+      if (aal.nextLevel !== "aal2") {
+        const url = request.nextUrl.clone();
+        url.pathname = "/profile";
+        url.search = "";
+        url.searchParams.set(
+          "message",
+          "Two-factor authentication is required for admin accounts. Set it up below."
+        );
+        return NextResponse.redirect(url);
+      }
+    }
   }
 
   return supabaseResponse;

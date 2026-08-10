@@ -30,6 +30,7 @@ export async function POST(
 
   const body = await request.json().catch(() => null);
   const dueDate = body?.dueDate;
+  const notifyEnabled = body?.notify !== false;
 
   if (typeof dueDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
     return NextResponse.json({ error: "Invalid date." }, { status: 400 });
@@ -46,7 +47,7 @@ export async function POST(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  if (task) {
+  if (task && notifyEnabled) {
     const recipientIds = (task.task_assignees ?? [])
       .map((row) => row.member_id)
       .filter((id): id is string => id !== null);
