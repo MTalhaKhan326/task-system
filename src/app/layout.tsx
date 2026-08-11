@@ -54,6 +54,11 @@ export default async function RootLayout({
                 <Link href="/profile" className="hover:text-brand">
                   Profile
                 </Link>
+                {role !== "admin" && (
+                  <Link href="/tasks/groups" className="hover:text-brand">
+                    My Groups
+                  </Link>
+                )}
                 {role === "admin" && (
                   <Link href="/admin/tasks" className="hover:text-brand">
                     Task Board

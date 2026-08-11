@@ -12,7 +12,14 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import type { CalendarDay } from "@/lib/calendar";
-import { STATUS_LABEL, PRIORITY_LABEL, avatarColor, initials, calendarChipClasses } from "@/lib/taskChip";
+import {
+  STATUS_LABEL,
+  STATUS_COLUMNS,
+  PRIORITY_LABEL,
+  avatarColor,
+  initials,
+  calendarChipClasses,
+} from "@/lib/taskChip";
 import { TaskDialog, type TaskDialogHandle } from "@/components/TaskDialog";
 
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -29,6 +36,7 @@ export type CalendarTask = {
   priority: string;
   dueDate: string;
   assignedGroupId: string | null;
+  createdBy: string | null;
   assignees: Assignee[];
   // Set when this chip is a subtask — the parent task's title.
   parentTitle: string | null;
@@ -36,6 +44,11 @@ export type CalendarTask = {
   // shown even if a subtask has a different (or no) due date, since
   // it otherwise wouldn't appear anywhere near this chip.
   subtaskSummaries: { title: string; dueDate: string | null }[];
+  // False for a member viewing a task assigned to them but created by
+  // someone else — editing/rescheduling that task would just fail
+  // server-side, so the chip drops the click-to-edit dialog and drag
+  // handle and becomes view-only (the hover popup still works).
+  canEdit: boolean;
 };
 
 type CalendarViewProps = {
@@ -43,19 +56,26 @@ type CalendarViewProps = {
   tasksByDate: Record<string, CalendarTask[]>;
   members: MemberOption[];
   groups: GroupOption[];
+  // "/admin/tasks" for the admin calendar, "/tasks" for a member's own —
+  // both the edit dialog's actionUrl and the drag-and-drop fetch are
+  // built from this.
+  basePath: string;
 };
 
 function TaskChip({
   task,
   members,
   groups,
+  basePath,
 }: {
   task: CalendarTask;
   members: MemberOption[];
   groups: GroupOption[];
+  basePath: string;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.id,
+    disabled: !task.canEdit,
   });
   const editRef = useRef<TaskDialogHandle>(null);
   const shown = task.assignees.slice(0, 2);
@@ -64,9 +84,9 @@ function TaskChip({
   return (
     <div
       ref={setNodeRef}
-      {...listeners}
-      {...attributes}
-      onClick={() => editRef.current?.open()}
+      {...(task.canEdit ? listeners : {})}
+      {...(task.canEdit ? attributes : {})}
+      onClick={task.canEdit ? () => editRef.current?.open() : undefined}
       className="group relative"
       style={{
         transform: transform ? `translate(${transform.x}px, ${transform.y}px)` : undefined,
@@ -74,9 +94,9 @@ function TaskChip({
       }}
     >
       <div
-        className={`flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-xs active:cursor-grabbing ${calendarChipClasses(
-          task.status
-        )} ${isDragging ? "opacity-50" : ""}`}
+        className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs ${
+          task.canEdit ? "cursor-pointer active:cursor-grabbing" : "cursor-default"
+        } ${calendarChipClasses(task.status)} ${isDragging ? "opacity-50" : ""}`}
       >
         {shown.length > 0 && (
           <div className="flex shrink-0 -space-x-1">
@@ -140,28 +160,48 @@ function TaskChip({
               </ul>
             </div>
           )}
-          <p className="mt-1 text-ink/40">Click to edit. Drag to a date to reschedule.</p>
+          {task.canEdit ? (
+            <p className="mt-1 text-ink/40">Click to edit. Drag to a date to reschedule.</p>
+          ) : task.status === "done" ? (
+            <p className="mt-2 text-ink/40">Done — only its creator or an admin can reopen it.</p>
+          ) : (
+            <div className="mt-2 flex flex-wrap gap-1 pointer-events-auto">
+              {STATUS_COLUMNS.filter((c) => c.key !== task.status).map((c) => (
+                <form key={c.key} action={`${basePath}/${task.id}/status`} method="POST">
+                  <input type="hidden" name="status" value={c.key} />
+                  <button
+                    type="submit"
+                    className="rounded border border-cream-dark px-1.5 py-0.5 text-[10px] text-ink/80 hover:bg-cream-mid"
+                  >
+                    Move to {c.label}
+                  </button>
+                </form>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      <TaskDialog
-        ref={editRef}
-        hideTrigger
-        triggerLabel=""
-        heading="Edit task"
-        actionUrl={`/admin/tasks/${task.id}/update`}
-        members={members}
-        groups={groups}
-        defaultValues={{
-          title: task.title,
-          description: task.description,
-          priority: task.priority,
-          dueDate: task.dueDate,
-          memberIds: task.assignees.map((a) => a.id),
-          groupId: task.assignedGroupId,
-        }}
-        small
-      />
+      {task.canEdit && (
+        <TaskDialog
+          ref={editRef}
+          hideTrigger
+          triggerLabel=""
+          heading="Edit task"
+          actionUrl={`${basePath}/${task.id}/update`}
+          members={members}
+          groups={groups}
+          defaultValues={{
+            title: task.title,
+            description: task.description,
+            priority: task.priority,
+            dueDate: task.dueDate,
+            memberIds: task.assignees.map((a) => a.id),
+            groupId: task.assignedGroupId,
+          }}
+          small
+        />
+      )}
     </div>
   );
 }
@@ -171,11 +211,13 @@ function DayCell({
   tasks,
   members,
   groups,
+  basePath,
 }: {
   day: CalendarDay;
   tasks: CalendarTask[];
   members: MemberOption[];
   groups: GroupOption[];
+  basePath: string;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: day.dateKey });
 
@@ -189,14 +231,14 @@ function DayCell({
       <div className="mb-1 text-xs text-ink/50">{day.dayOfMonth}</div>
       <div className="flex flex-col gap-1">
         {tasks.map((task) => (
-          <TaskChip key={task.id} task={task} members={members} groups={groups} />
+          <TaskChip key={task.id} task={task} members={members} groups={groups} basePath={basePath} />
         ))}
       </div>
     </div>
   );
 }
 
-export function CalendarView({ weeks, tasksByDate, members, groups }: CalendarViewProps) {
+export function CalendarView({ weeks, tasksByDate, members, groups, basePath }: CalendarViewProps) {
   const router = useRouter();
   const [localTasksByDate, setLocalTasksByDate] = useState(tasksByDate);
   const [error, setError] = useState<string | null>(null);
@@ -243,7 +285,7 @@ export function CalendarView({ weeks, tasksByDate, members, groups }: CalendarVi
     document.dispatchEvent(new Event("app:pending"));
 
     try {
-      const res = await fetch(`/admin/tasks/${taskId}/due-date`, {
+      const res = await fetch(`${basePath}/${taskId}/due-date`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dueDate: targetDate, notify: sendEmail }),
@@ -287,6 +329,7 @@ export function CalendarView({ weeks, tasksByDate, members, groups }: CalendarVi
                   tasks={localTasksByDate[day.dateKey] ?? []}
                   members={members}
                   groups={groups}
+                  basePath={basePath}
                 />
               ))
             )}

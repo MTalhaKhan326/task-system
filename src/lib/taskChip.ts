@@ -4,6 +4,12 @@ export const STATUS_LABEL: Record<string, string> = {
   done: "Done",
 };
 
+export const STATUS_COLUMNS: { key: "todo" | "doing" | "done"; label: string }[] = [
+  { key: "todo", label: "To do" },
+  { key: "doing", label: "Doing" },
+  { key: "done", label: "Done" },
+];
+
 export const PRIORITY_LABEL: Record<string, string> = {
   low: "Low",
   medium: "Medium",

@@ -200,7 +200,7 @@ export const TaskDialog = forwardRef<TaskDialogHandle, TaskDialogProps>(function
 
           <fieldset className="rounded border border-cream-dark p-3">
             <legend className="px-1 text-sm text-ink/80">Assign to</legend>
-            <div className="max-h-40 overflow-y-auto">
+            <div className="max-h-72 overflow-y-auto">
               {members.length === 0 && groups.length === 0 && (
                 <p className="text-xs text-ink/50">No members or groups yet.</p>
               )}

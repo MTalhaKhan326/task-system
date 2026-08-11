@@ -6,6 +6,7 @@ import { DeleteGroupButton } from "@/components/DeleteGroupButton";
 type GroupRow = {
   id: string;
   name: string;
+  members: { full_name: string | null; email: string } | null;
   group_members: {
     members: { id: string; email: string; full_name: string | null } | null;
   }[];
@@ -27,7 +28,9 @@ export default async function AdminGroupsPage({
   const [{ data: groups, error: groupsError }, { data: members }] = await Promise.all([
     supabase
       .from("groups")
-      .select("id, name, group_members(members(id, email, full_name))")
+      .select(
+        "id, name, members!groups_created_by_fkey(full_name, email), group_members(members(id, email, full_name))"
+      )
       .order("name")
       .returns<GroupRow[]>(),
     supabase
@@ -96,6 +99,10 @@ export default async function AdminGroupsPage({
                       {currentMembers.length} member{currentMembers.length === 1 ? "" : "s"}
                     </span>
                   </div>
+
+                  <p className="mt-0.5 text-xs text-ink/40">
+                    Created by {group.members?.full_name ?? group.members?.email ?? "an admin"}
+                  </p>
 
                   {currentMembers.length > 0 && (
                     <p className="mt-1 text-xs text-ink/50">

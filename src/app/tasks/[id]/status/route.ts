@@ -34,6 +34,23 @@ export async function POST(
     return NextResponse.redirect(tasksUrl, { status: 303 });
   }
 
+  // Once a task is done, only its creator (or an admin, via the
+  // separate /admin/tasks/[id]/status route) can move it again — a
+  // plain assignee can't reopen or otherwise touch a completed task.
+  const { data: existing } = await supabase
+    .from("tasks")
+    .select("status, created_by")
+    .eq("id", taskId)
+    .maybeSingle();
+
+  if (existing?.status === "done" && existing.created_by !== member?.id) {
+    tasksUrl.searchParams.set(
+      "error",
+      "This task is done — only its creator or an admin can change its status now."
+    );
+    return NextResponse.redirect(tasksUrl, { status: 303 });
+  }
+
   // This runs on the member's own session (RLS-scoped), and the update
   // payload is a literal object with only the status field — never the
   // raw form body — so no other column can be smuggled in here even if

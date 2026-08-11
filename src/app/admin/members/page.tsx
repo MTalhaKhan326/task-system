@@ -1,10 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { DeleteMemberButton } from "@/components/DeleteMemberButton";
+import { RoleSelect } from "@/components/RoleSelect";
 
 export default async function AdminMembersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; invited?: string; deleted?: string }>;
+  searchParams: Promise<{ error?: string; invited?: string; deleted?: string; roleUpdated?: string }>;
 }) {
   const params = await searchParams;
   const supabase = await createClient();
@@ -36,6 +37,11 @@ export default async function AdminMembersPage({
         {params.deleted && (
           <p className="mb-4 rounded bg-brand-soft p-3 text-sm text-brand">
             Member deleted. Their task history and comments were kept.
+          </p>
+        )}
+        {params.roleUpdated && (
+          <p className="mb-4 rounded bg-brand-soft p-3 text-sm text-brand">
+            Role updated.
           </p>
         )}
         {params.error && (
@@ -86,7 +92,16 @@ export default async function AdminMembersPage({
                   <td className="px-4 py-2 text-ink/70">
                     {member.full_name ?? "—"}
                   </td>
-                  <td className="px-4 py-2 text-ink/70">{member.role}</td>
+                  <td className="px-4 py-2 text-ink/70">
+                    {member.id === currentMember?.id ? (
+                      member.role
+                    ) : (
+                      <RoleSelect
+                        actionUrl={`/admin/members/${member.id}/role`}
+                        currentRole={member.role}
+                      />
+                    )}
+                  </td>
                   <td className="px-4 py-2 text-ink/70">{member.status}</td>
                   <td className="px-4 py-2">
                     {member.id !== currentMember?.id && member.status !== "disabled" && (
