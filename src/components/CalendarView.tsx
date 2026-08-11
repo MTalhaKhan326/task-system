@@ -240,6 +240,7 @@ export function CalendarView({ weeks, tasksByDate, members, groups }: CalendarVi
       return next;
     });
     setError(null);
+    document.dispatchEvent(new Event("app:pending"));
 
     try {
       const res = await fetch(`/admin/tasks/${taskId}/due-date`, {
@@ -255,6 +256,8 @@ export function CalendarView({ weeks, tasksByDate, members, groups }: CalendarVi
     } catch (err) {
       setLocalTasksByDate(previous);
       setError(err instanceof Error ? err.message : "Could not move task.");
+    } finally {
+      document.dispatchEvent(new Event("app:pending:done"));
     }
   }
 

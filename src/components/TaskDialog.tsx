@@ -71,9 +71,20 @@ export const TaskDialog = forwardRef<TaskDialogHandle, TaskDialogProps>(function
     if (notifyInputRef.current) {
       notifyInputRef.current.value = sendEmail ? "true" : "false";
     }
-    // Native submit — bypasses this handler (no infinite loop) and is safe
-    // since built-in validation already passed before onSubmit ever fired.
-    formRef.current?.submit();
+    // This submit() call bypasses the browser's native "submit" event
+    // entirely, so the global loading overlay (GlobalPendingOverlay) can't
+    // see it on its own — signal it manually instead.
+    document.dispatchEvent(new Event("app:pending"));
+    // Give the browser a paint frame to actually show that overlay before
+    // navigating away — calling submit() synchronously in the same tick
+    // as the state update can start the page unload before it ever
+    // renders, so the loader silently never appears.
+    requestAnimationFrame(() => {
+      // Native submit — bypasses this handler (no infinite loop) and is
+      // safe since built-in validation already passed before onSubmit
+      // ever fired.
+      formRef.current?.submit();
+    });
   }
 
   return (

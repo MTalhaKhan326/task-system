@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { RealtimeTasksListener } from "@/components/RealtimeTasksListener";
 
 const STATUS_OPTIONS = [
   { value: "todo", label: "To do" },
@@ -67,6 +68,7 @@ export default async function MemberTasksPage({
 
   return (
     <div className="flex flex-1 flex-col items-center bg-cream px-4 py-16">
+      <RealtimeTasksListener />
       <div className="w-full max-w-2xl">
         <h1 className="mb-6 font-display text-3xl tracking-wide text-ink uppercase">My tasks</h1>
 

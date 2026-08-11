@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import "./globals.css";
 import { createClient } from "@/lib/supabase/server";
+import { GlobalPendingOverlay } from "@/components/GlobalPendingOverlay";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -38,6 +39,7 @@ export default async function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col bg-cream" suppressHydrationWarning>
+        <GlobalPendingOverlay />
         <header className="flex items-center justify-between border-b border-cream-dark bg-white px-6 py-4">
           <Link href="/" className="flex items-center gap-3 font-display text-lg tracking-wide text-brand uppercase">
             <Image src="/eternity-logo.svg" alt="Eternity" width={44} height={44} unoptimized />

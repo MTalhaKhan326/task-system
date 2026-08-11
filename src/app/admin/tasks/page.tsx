@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { TaskDialog } from "@/components/TaskDialog";
 import { DeleteTaskButton } from "@/components/DeleteTaskButton";
 import { CalendarView, type CalendarTask } from "@/components/CalendarView";
+import { RealtimeTasksListener } from "@/components/RealtimeTasksListener";
 import {
   buildCalendarWeeks,
   monthLabel,
@@ -112,6 +113,7 @@ export default async function AdminTasksPage({
 
   return (
     <div className="flex flex-1 flex-col items-center bg-cream px-4 py-16">
+      <RealtimeTasksListener />
       <div className="w-full max-w-6xl">
         <div className="mb-6 flex items-center justify-between">
           <h1 className="font-display text-3xl tracking-wide text-ink uppercase">Tasks</h1>
