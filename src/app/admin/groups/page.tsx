@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { GroupDialog } from "@/components/GroupDialog";
 import { GroupMembersDialog } from "@/components/GroupMembersDialog";
@@ -94,7 +95,12 @@ export default async function AdminGroupsPage({
                   className="rounded border border-cream-dark bg-white p-4"
                 >
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-ink">{group.name}</span>
+                    <Link
+                      href={`/admin/groups/${group.id}`}
+                      className="font-medium text-ink hover:text-brand hover:underline"
+                    >
+                      {group.name}
+                    </Link>
                     <span className="text-xs text-ink/50">
                       {currentMembers.length} member{currentMembers.length === 1 ? "" : "s"}
                     </span>
@@ -111,6 +117,12 @@ export default async function AdminGroupsPage({
                   )}
 
                   <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <Link
+                      href={`/admin/groups/${group.id}`}
+                      className="rounded border border-cream-dark px-2 py-1 text-xs text-ink/80 hover:bg-cream-mid"
+                    >
+                      View task board
+                    </Link>
                     <GroupDialog
                       triggerLabel="Rename"
                       heading="Rename group"

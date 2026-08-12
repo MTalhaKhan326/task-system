@@ -58,7 +58,10 @@ export async function POST(request: NextRequest) {
   }
 
   const assigneeIds = Array.from(new Set([...memberIds, ...groupMemberIds]));
-  const assignedGroupId = groupIds.length === 1 && memberIds.length === 0 ? groupIds[0] : null;
+  // Based purely on whether a group is checked — not on memberIds, so
+  // picking a group and also hand-adding an extra individual member
+  // doesn't silently drop the group association.
+  const assignedGroupId = groupIds.length === 1 ? groupIds[0] : null;
 
   const { data: task, error } = await supabase
     .from("tasks")

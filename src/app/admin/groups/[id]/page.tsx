@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { GroupDialog } from "@/components/GroupDialog";
 import { GroupMembersDialog } from "@/components/GroupMembersDialog";
@@ -12,13 +12,12 @@ import { parseMonthParam, monthLabel, shiftMonthParam } from "@/lib/calendar";
 type GroupRow = {
   id: string;
   name: string;
-  created_by: string | null;
   group_members: {
     members: { id: string; email: string; full_name: string | null } | null;
   }[];
 };
 
-export default async function GroupTasksPage({
+export default async function AdminGroupTaskBoardPage({
   params,
   searchParams,
 }: {
@@ -30,20 +29,12 @@ export default async function GroupTasksPage({
   const view =
     sp.view === "calendar" ? "calendar" : sp.view === "list" ? "list" : "board";
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect(`/login?redirectTo=/tasks/groups/${groupId}`);
-  }
-
-  const [{ data: member }, { data: group }, { data: tasks, error: tasksError }, { data: members }, { data: groups }] =
+  const [{ data: group }, { data: tasks, error: tasksError }, { data: members }, { data: groups }] =
     await Promise.all([
-      supabase.from("members").select("id").eq("user_id", user.id).maybeSingle(),
       supabase
         .from("groups")
-        .select("id, name, created_by, group_members(members(id, email, full_name))")
+        .select("id, name, group_members(members(id, email, full_name))")
         .eq("id", groupId)
         .maybeSingle()
         .returns<GroupRow | null>(),
@@ -60,21 +51,16 @@ export default async function GroupTasksPage({
       supabase.from("groups").select("id, name").order("name"),
     ]);
 
-  // RLS scopes both queries: this only resolves if the group is visible
-  // to the signed-in member (their own or one they belong to), and the
-  // task list only ever contains tasks this member can already see.
   if (!group) {
     notFound();
   }
 
-  const viewerId = member?.id ?? null;
   const memberOptions = members ?? [];
   const groupOptions = groups ?? [];
   const allTasks = tasks ?? [];
   const currentMembers = group.group_members
     .map((row) => row.members)
     .filter((m): m is NonNullable<typeof m> => m !== null);
-  const isOwner = group.created_by === viewerId;
 
   const { year, month } = parseMonthParam(sp.month);
   const { topLevelTasks, subtasksByParent, tasksById, weeks, tasksByDate } = buildTaskBoardData(
@@ -82,38 +68,36 @@ export default async function GroupTasksPage({
     view,
     year,
     month,
-    viewerId,
-    false
+    null,
+    true
   );
-  const prevMonthHref = `/tasks/groups/${groupId}?view=calendar&month=${shiftMonthParam(year, month, -1)}`;
-  const nextMonthHref = `/tasks/groups/${groupId}?view=calendar&month=${shiftMonthParam(year, month, 1)}`;
+  const prevMonthHref = `/admin/groups/${groupId}?view=calendar&month=${shiftMonthParam(year, month, -1)}`;
+  const nextMonthHref = `/admin/groups/${groupId}?view=calendar&month=${shiftMonthParam(year, month, 1)}`;
 
   return (
     <div className="flex flex-1 flex-col items-center bg-cream px-4 py-16">
       <div className="w-full max-w-6xl">
-        <Link href="/tasks/groups" className="mb-2 inline-block text-sm text-ink/50 hover:text-brand">
-          &larr; My groups
+        <Link href="/admin/groups" className="mb-2 inline-block text-sm text-ink/50 hover:text-brand">
+          &larr; Groups
         </Link>
 
         <div className="mb-2 flex items-center justify-between">
           <h1 className="font-display text-3xl tracking-wide text-ink uppercase">{group.name}</h1>
-          {isOwner && (
-            <div className="flex flex-wrap items-center gap-2">
-              <GroupDialog
-                triggerLabel="Rename"
-                heading="Rename group"
-                actionUrl={`/tasks/groups/${groupId}/rename`}
-                defaultValues={{ name: group.name }}
-                small
-              />
-              <GroupMembersDialog
-                actionUrl={`/tasks/groups/${groupId}/members`}
-                members={memberOptions}
-                currentMemberIds={currentMembers.map((m) => m.id)}
-              />
-              <DeleteGroupButton actionUrl={`/tasks/groups/${groupId}/delete`} />
-            </div>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <GroupDialog
+              triggerLabel="Rename"
+              heading="Rename group"
+              actionUrl={`/admin/groups/${groupId}/rename`}
+              defaultValues={{ name: group.name }}
+              small
+            />
+            <GroupMembersDialog
+              actionUrl={`/admin/groups/${groupId}/members`}
+              members={memberOptions}
+              currentMemberIds={currentMembers.map((m) => m.id)}
+            />
+            <DeleteGroupButton actionUrl={`/admin/groups/${groupId}/delete`} />
+          </div>
         </div>
 
         <p className="mb-6 text-sm text-ink/50">
@@ -126,19 +110,19 @@ export default async function GroupTasksPage({
         <div className="mb-6 flex items-center justify-between">
           <div className="flex gap-4 text-sm">
             <Link
-              href={`/tasks/groups/${groupId}?view=board`}
+              href={`/admin/groups/${groupId}?view=board`}
               className={view === "board" ? "font-medium text-brand" : "text-ink/50 hover:text-brand"}
             >
               Board
             </Link>
             <Link
-              href={`/tasks/groups/${groupId}?view=list`}
+              href={`/admin/groups/${groupId}?view=list`}
               className={view === "list" ? "font-medium text-brand" : "text-ink/50 hover:text-brand"}
             >
               List
             </Link>
             <Link
-              href={`/tasks/groups/${groupId}?view=calendar`}
+              href={`/admin/groups/${groupId}?view=calendar`}
               className={view === "calendar" ? "font-medium text-brand" : "text-ink/50 hover:text-brand"}
             >
               Calendar
@@ -150,7 +134,7 @@ export default async function GroupTasksPage({
               <Link href={prevMonthHref} aria-label="Previous month" className="hover:text-brand">
                 &larr;
               </Link>
-              <Link href={`/tasks/groups/${groupId}?view=calendar`} className="hover:text-brand hover:underline">
+              <Link href={`/admin/groups/${groupId}?view=calendar`} className="hover:text-brand hover:underline">
                 Today
               </Link>
               <span className="font-medium text-ink">{monthLabel(year, month)}</span>
@@ -176,9 +160,9 @@ export default async function GroupTasksPage({
             tasksByDate={tasksByDate}
             members={memberOptions}
             groups={groupOptions}
-            actionBasePath="/tasks"
-            viewerId={viewerId}
-            isAdmin={false}
+            actionBasePath="/admin/tasks"
+            viewerId={null}
+            isAdmin
             showComments={view === "list"}
           />
         )}

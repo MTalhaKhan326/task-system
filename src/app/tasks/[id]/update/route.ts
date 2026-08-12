@@ -79,7 +79,12 @@ export async function POST(
   }
 
   const desiredIds = new Set([...memberIds, ...groupMemberIds]);
-  const assignedGroupId = groupIds.length === 1 && memberIds.length === 0 ? groupIds[0] : null;
+  // Based purely on whether a group is checked — not on memberIds,
+  // since a group-assigned task's own members always show up checked
+  // individually too (the group fan-out put them there). Requiring
+  // memberIds to be empty here used to silently wipe assigned_group_id
+  // on every single edit of a task that had one.
+  const assignedGroupId = groupIds.length === 1 ? groupIds[0] : null;
 
   const { error: updateError } = await supabase
     .from("tasks")
