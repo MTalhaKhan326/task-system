@@ -9,7 +9,7 @@ type MemberOption = { id: string; email: string; full_name: string | null };
 type GroupOption = { id: string; name: string };
 
 type Props = {
-  view: "board" | "list" | "calendar";
+  view: "board" | "list" | "calendar" | "created";
   topLevelTasks: TaskRow[];
   allTasks: TaskRow[];
   subtasksByParent: Record<string, TaskRow[]>;

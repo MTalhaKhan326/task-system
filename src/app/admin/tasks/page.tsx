@@ -25,11 +25,23 @@ export default async function AdminTasksPage({
 }) {
   const params = await searchParams;
   const view =
-    params.view === "calendar" ? "calendar" : params.view === "list" ? "list" : "board";
+    params.view === "calendar"
+      ? "calendar"
+      : params.view === "list"
+        ? "list"
+        : params.view === "created"
+          ? "created"
+          : "board";
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const [{ data: tasks, error: tasksError }, { data: members }, { data: groups }] =
+  const [{ data: adminMember }, { data: tasks, error: tasksError }, { data: members }, { data: groups }] =
     await Promise.all([
+      user
+        ? supabase.from("members").select("id").eq("user_id", user.id).maybeSingle()
+        : Promise.resolve({ data: null }),
       supabase
         .from("tasks")
         .select(
@@ -46,6 +58,7 @@ export default async function AdminTasksPage({
       supabase.from("groups").select("id, name").order("name"),
     ]);
 
+  const viewerId = adminMember?.id ?? null;
   const memberOptions = members ?? [];
   const groupOptions = groups ?? [];
   const allTasks = tasks ?? [];
@@ -143,6 +156,16 @@ export default async function AdminTasksPage({
             >
               Calendar
             </Link>
+            <Link
+              href="/admin/tasks?view=created"
+              className={
+                view === "created"
+                  ? "font-medium text-brand"
+                  : "text-ink/50 hover:text-brand"
+              }
+            >
+              Created by Me
+            </Link>
           </div>
 
           {view === "calendar" && (
@@ -193,7 +216,7 @@ export default async function AdminTasksPage({
             members={memberOptions}
             groups={groupOptions}
             actionBasePath="/admin/tasks"
-            viewerId={null}
+            viewerId={viewerId}
             isAdmin
           />
         )}

@@ -20,7 +20,13 @@ export default async function MemberTasksPage({
 }) {
   const params = await searchParams;
   const view =
-    params.view === "calendar" ? "calendar" : params.view === "list" ? "list" : "board";
+    params.view === "calendar"
+      ? "calendar"
+      : params.view === "list"
+        ? "list"
+        : params.view === "created"
+          ? "created"
+          : "board";
   const supabase = await createClient();
   const {
     data: { user },
@@ -131,6 +137,12 @@ export default async function MemberTasksPage({
             >
               Calendar
             </Link>
+            <Link
+              href="/tasks?view=created"
+              className={view === "created" ? "font-medium text-brand" : "text-ink/50 hover:text-brand"}
+            >
+              Created by Me
+            </Link>
           </div>
 
           {view === "calendar" && (
@@ -183,7 +195,7 @@ export default async function MemberTasksPage({
             actionBasePath="/tasks"
             viewerId={viewerId}
             isAdmin={false}
-            showComments={view === "list"}
+            showComments={view === "list" || view === "created"}
           />
         )}
       </div>
